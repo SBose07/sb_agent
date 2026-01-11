@@ -1,6 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { StreamEvent, ChatMessage } from '../types';
 import { streamChat } from '../services/streaming';
+
+// Store chat history per document
+const chatHistoryStore: Record<string, ChatMessage[]> = {};
 
 export function useChat(
     documentId: string | undefined,
@@ -11,6 +14,35 @@ export function useChat(
     const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
     const [streamingContent, setStreamingContent] = useState('');
     const abortRef = useRef(false);
+    const currentDocIdRef = useRef<string | undefined>(documentId);
+
+    // Load chat history when document changes
+    useEffect(() => {
+        if (documentId) {
+            // Save current messages to previous document
+            if (currentDocIdRef.current && currentDocIdRef.current !== documentId) {
+                chatHistoryStore[currentDocIdRef.current] = messages;
+            }
+
+            // Load messages for new document
+            const savedMessages = chatHistoryStore[documentId] || [];
+            setMessages(savedMessages);
+            currentDocIdRef.current = documentId;
+        } else {
+            setMessages([]);
+        }
+
+        // Reset streaming state on document change
+        setHighlightedLine(null);
+        setStreamingContent('');
+    }, [documentId]);
+
+    // Save messages to store whenever they change
+    useEffect(() => {
+        if (documentId && messages.length > 0) {
+            chatHistoryStore[documentId] = messages;
+        }
+    }, [documentId, messages]);
 
     const sendMessage = useCallback(async (prompt: string) => {
         if (!documentId || isStreaming) return;
@@ -145,7 +177,11 @@ export function useChat(
     const clearMessages = useCallback(() => {
         setMessages([]);
         setHighlightedLine(null);
-    }, []);
+        // Also clear from store
+        if (documentId) {
+            delete chatHistoryStore[documentId];
+        }
+    }, [documentId]);
 
     const stopStreaming = useCallback(() => {
         abortRef.current = true;

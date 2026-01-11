@@ -126,6 +126,41 @@ body {
   box-shadow: 0 4px 12px rgba(100, 255, 218, 0.3);
 }
 
+.upload-btn,
+.download-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.upload-btn:hover,
+.download-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-link {
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  text-decoration: underline;
+}
+
 /* App Content */
 .app-content {
   display: flex;
@@ -143,7 +178,7 @@ body {
 }
 
 .sidebar-header {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
@@ -156,6 +191,28 @@ body {
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sidebar-icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.sidebar-icon-btn:hover {
+  opacity: 1;
+  background: rgba(100, 255, 218, 0.15);
+  transform: scale(1.1);
 }
 
 .doc-count {
@@ -177,7 +234,7 @@ body {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 0.25rem;
   padding: var(--spacing-xs);
   background: transparent;
   border-radius: var(--radius-md);
@@ -207,6 +264,7 @@ body {
   text-align: left;
   border-radius: var(--radius-sm);
   transition: color 0.2s ease;
+  min-width: 0;
 }
 
 .document-item:hover .doc-select-btn,
@@ -228,7 +286,41 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 0.15rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.document-item:hover .doc-actions {
+  opacity: 1;
+}
+
+.doc-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.doc-action-btn:hover {
+  opacity: 1;
+}
+
+.doc-action-btn.download:hover {
+  background: rgba(100, 255, 218, 0.2);
+}
+
+.doc-action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .doc-delete-btn {
@@ -321,8 +413,14 @@ body {
   color: var(--color-text-secondary);
 }
 
+.empty-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  margin-top: var(--spacing-md);
+}
+
 .empty-docs button {
-  margin-top: var(--spacing-sm);
   background: rgba(100, 255, 218, 0.1);
   border: 1px solid rgba(100, 255, 218, 0.3);
   color: var(--color-accent);
@@ -330,6 +428,7 @@ body {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 0.85rem;
 }
 
 .empty-docs button:hover {

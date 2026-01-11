@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { DocumentEditor } from './components/DocumentEditor/DocumentEditor';
 import { ChatInterface } from './components/ChatInterface/ChatInterface';
 import { useDocument } from './hooks/useDocument';
 import { useChat } from './hooks/useChat';
 import './App.css';
+
+const API_BASE_URL = 'http://localhost:8000/api';
 
 function App() {
   const {
@@ -15,6 +17,7 @@ function App() {
     createDocument,
     deleteDocument,
     refreshCurrentDocument,
+    fetchDocuments,
   } = useDocument();
 
   const {
@@ -26,17 +29,78 @@ function App() {
   } = useChat(currentDocument?.id, refreshCurrentDocument);
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleNewDocument = useCallback(async () => {
     const title = prompt('Enter document title:');
     if (title) {
-      // Create empty document with just the title
       await createDocument({
         title,
-        content: `# ${title}\n\n`
+        content: ''
       });
     }
   }, [createDocument]);
+
+  const handleUploadClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.docx')) {
+      alert('Please upload a .docx file');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const doc = await response.json();
+      await fetchDocuments();
+      selectDocument(doc);
+    } catch (err) {
+      alert('Error uploading file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [fetchDocuments, selectDocument]);
+
+  const handleDownload = useCallback(async (docId: string, docTitle: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${docId}/download`);
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${docTitle}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert('Error downloading file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  }, []);
 
   const handleDeleteClick = useCallback((e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
@@ -59,11 +123,6 @@ function App() {
           <span className="logo-icon">✨</span>
           <h1>GenAI Document Editor</h1>
         </div>
-        <div className="header-actions">
-          <button className="new-doc-btn" onClick={handleNewDocument}>
-            + New Document
-          </button>
-        </div>
       </header>
 
       <div className="app-content">
@@ -71,7 +130,29 @@ function App() {
         <aside className="sidebar">
           <div className="sidebar-header">
             <h3>Documents</h3>
-            <span className="doc-count">{documents.length}</span>
+            <div className="sidebar-actions">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".docx"
+                style={{ display: 'none' }}
+              />
+              <button
+                className="sidebar-icon-btn"
+                onClick={handleUploadClick}
+                title="Upload .docx file"
+              >
+                📤
+              </button>
+              <button
+                className="sidebar-icon-btn"
+                onClick={handleNewDocument}
+                title="New document"
+              >
+                ➕
+              </button>
+            </div>
           </div>
           <div className="documents-list">
             {isLoading && documents.length === 0 ? (
@@ -79,7 +160,10 @@ function App() {
             ) : documents.length === 0 ? (
               <div className="empty-docs">
                 <p>No documents yet</p>
-                <button onClick={handleNewDocument}>Create one</button>
+                <div className="empty-actions">
+                  <button onClick={handleNewDocument} title="New document">➕ New</button>
+                  <button onClick={handleUploadClick} title="Upload .docx">📤 Upload</button>
+                </div>
               </div>
             ) : (
               documents.map((doc) => (
@@ -95,32 +179,42 @@ function App() {
                     <span className="doc-title">{doc.title}</span>
                   </button>
 
-                  {deleteConfirm === doc.id ? (
-                    <div className="delete-confirm">
-                      <button
-                        className="confirm-yes"
-                        onClick={() => handleConfirmDelete(doc.id)}
-                        title="Confirm delete"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        className="confirm-no"
-                        onClick={handleCancelDelete}
-                        title="Cancel"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
+                  <div className="doc-actions">
                     <button
-                      className="doc-delete-btn"
-                      onClick={(e) => handleDeleteClick(e, doc.id)}
-                      title="Delete document"
+                      className="doc-action-btn download"
+                      onClick={(e) => handleDownload(doc.id, doc.title, e)}
+                      title="Download as .docx"
                     >
-                      🗑️
+                      📥
                     </button>
-                  )}
+
+                    {deleteConfirm === doc.id ? (
+                      <div className="delete-confirm">
+                        <button
+                          className="confirm-yes"
+                          onClick={() => handleConfirmDelete(doc.id)}
+                          title="Confirm delete"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          className="confirm-no"
+                          onClick={handleCancelDelete}
+                          title="Cancel"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="doc-action-btn delete"
+                        onClick={(e) => handleDeleteClick(e, doc.id)}
+                        title="Delete document"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
